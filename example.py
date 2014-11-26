@@ -31,11 +31,24 @@ def compute_bcpnn_traces(spike_train_0, spike_train_1, K_vec, syn_params, t_sim,
 
 
 if __name__ == '__main__':
+
     t_sim = 500.
     dt = 0.1
-    st_0 = np.array([10., 20., 30.])
-    st_1 = np.array([110., 120., 130.])
-    K_vec = np.ones((t_sim + 1.) / dt)
-    syn_params = {'p_i': .01, 'p_j': .01, 'p_ij': .0001, 'gain': 1.0, 'K': 0., 'fmax': 20., 'epsilon': 1. / (20. * 10000.), 'delay':1.0, 'tau_i': 150., 'tau_j': 5., 'tau_e': .1, 'tau_p': 10000.}
+    st_0 = np.array([50., 55., 60.])
+    st_1 = np.array([150., 155., 160.])
+#    K_vec = np.ones((t_sim + 1.) / dt)
+    spike_width = 0.1
+    K_vec = np.ones((t_sim + spike_width) / dt)
+    tau_p = 1000.
+    tau_e = 10.
+    tau_i = 75.
+    tau_j = 10.
+    syn_params = {'p_i': .01, 'p_j': .01, 'p_ij': .0001, 'gain': 1.0, \
+            'K': 0., 'fmax': 20., 'epsilon': 1. / (20. * tau_p), \
+            'delay':1.0, 'tau_i': tau_i, 'tau_j': tau_j, 'tau_e': tau_e, 'tau_p': tau_p}
     w_offline = compute_bcpnn_traces(st_0, st_1, K_vec, syn_params, t_sim, plot=True)
+
+    output_fn = 'example_plot_taui%d.png' % tau_i
+    print 'Saving fig to:', output_fn
+    pylab.savefig(output_fn, dpi=200)
     pylab.show()

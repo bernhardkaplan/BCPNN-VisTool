@@ -1,18 +1,16 @@
 import numpy as np
 
-def convert_spiketrain_to_trace(st, t_max, dt=0.1, spike_width=10):
+def convert_spiketrain_to_trace(st, t_max, t_min=0., dt=0.1, spike_width=1):
     """Converts a single spike train into a binary trace
     Keyword arguments: 
     st --  spike train in the format [time, id]
     spike_width -- number of time steps (in dt) for which the trace is set to 1
     Returns a np.array with st[i] = 1 if i in st[:, 0], st[i] = 0 else.
-
-    TODO: get t_min
     """
-    n = np.int(t_max / dt) + spike_width
+    n = np.int((t_max - t_min)/ dt) + spike_width
     trace = np.zeros(n)
     spike_idx = st / dt
-    idx = spike_idx.astype(np.int)
+    idx = (spike_idx - t_min / dt).astype(np.int)
     trace[idx] = 1
     for i in xrange(spike_width):
         trace[idx + i] = 1
@@ -35,27 +33,17 @@ def get_spiking_weight_and_bias(pre_trace, post_trace, bcpnn_params, dt=.1, K_ve
     n = len(pre_trace)
     si = pre_trace      # spiking activity (spikes have a width and a height)
     sj = post_trace
-
-    zi = np.ones(n) * 0.01
-    zj = np.ones(n) * 0.01
-    eij = np.ones(n) * 0.001
-    ei = np.ones(n) * 0.01
-    ej = np.ones(n) * 0.01
-    pi = np.ones(n) * 0.01
-    pj = np.ones(n) * 0.01
-
-#    zi = np.ones(n) * initial_value
-#    zj = np.ones(n) * initial_value
-#    eij = np.ones(n) * initial_value**2
-#    ei = np.ones(n) * initial_value
-#    ej = np.ones(n) * initial_value
-#    pi = np.ones(n) * initial_value
-#    pj = np.ones(n) * initial_value
+    zi = np.ones(n) * initial_value
+    zj = np.ones(n) * initial_value
+    eij = np.ones(n) * initial_value**2
+    ei = np.ones(n) * initial_value
+    ej = np.ones(n) * initial_value
+    pi = np.ones(n) * initial_value
+    pj = np.ones(n) * initial_value
     pij = pi * pj * np.exp(w_init)
     wij = np.ones(n)  * w_init #np.log(pij[0] / (pi[0] * pj[0]))
     bias = np.ones(n) * np.log(initial_value)
-#    spike_height = 1000. / (bcpnn_params['fmax'] * dt)
-    spike_height = 1000. / bcpnn_params['fmax']
+    spike_height = 1000. / (bcpnn_params['fmax'] * dt)
     eps = bcpnn_params['epsilon']
     K = bcpnn_params['K']
     gain = bcpnn_params['gain']
@@ -63,7 +51,6 @@ def get_spiking_weight_and_bias(pre_trace, post_trace, bcpnn_params, dt=.1, K_ve
         K_vec = np.ones(n) * K
 
     for i in xrange(1, n):
-#        print 'debug', K_vec[i]
         # pre-synaptic trace zi follows si
         dzi = dt * (si[i] * spike_height - zi[i-1] + eps) / bcpnn_params['tau_i']
         zi[i] = zi[i-1] + dzi
