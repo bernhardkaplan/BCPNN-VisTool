@@ -23,27 +23,28 @@ def get_fig_size(fig_width_pt, portrait=False):
 
 class TracePlotter(object):
 
-    def __init__(self):
+    def __init__(self, plot_params=None):
 
-        plot_params = {'backend': 'png',
-                      'axes.labelsize': 20,
-                      'axes.titlesize': 20,
-                      'text.fontsize': 20,
-                      'xtick.labelsize': 16,
-                      'ytick.labelsize': 16,
-                      'legend.pad': 0.2,     # empty space around the legend box
-                      'legend.fontsize': 14,
-                       'lines.markersize': 1,
-                       'lines.markeredgewidth': 0.,
-                       'lines.linewidth': 1,
-                      'font.size': 12,
-                      'path.simplify': False,
-                      'figure.subplot.left':.15,
-                      'figure.subplot.bottom':.13,
-                      'figure.subplot.right':.94,
-                      'figure.subplot.top':.92,
-                      'figure.subplot.hspace':.30,
-                      'figure.subplot.wspace':.18}
+        if plot_params == None:
+            plot_params = {'backend': 'png',
+                          'axes.labelsize': 20,
+                          'axes.titlesize': 20,
+                          'text.fontsize': 20,
+                          'xtick.labelsize': 16,
+                          'ytick.labelsize': 16,
+                          'legend.pad': 0.2,     # empty space around the legend box
+                          'legend.fontsize': 14,
+                           'lines.markersize': 1,
+                           'lines.markeredgewidth': 0.,
+                           'lines.linewidth': 1,
+                          'font.size': 12,
+                          'path.simplify': False,
+                          'figure.subplot.left':.15,
+                          'figure.subplot.bottom':.13,
+                          'figure.subplot.right':.94,
+                          'figure.subplot.top':.92,
+                          'figure.subplot.hspace':.30,
+                          'figure.subplot.wspace':.18}
 
         pylab.rcParams.update(plot_params)
 
@@ -232,6 +233,69 @@ class TracePlotter(object):
             print 'Saving traces to:', output_fn
             pylab.savefig(output_fn)
 
+        return fig
+
+
+    def plot_zij_pij_weight_bias(self, bcpnn_traces, bcpnn_params, dt, output_fn=None, fig=None, \
+            color_pre='b', color_post='g', color_joint='r', style_joint='-', K_vec=None, \
+            extra_txt=None):
+        # unpack the bcpnn_traces
+        wij, bias, pi, pj, pij, ei, ej, eij, zi, zj, pre_trace, post_trace = bcpnn_traces
+        t_axis = dt * np.arange(zi.size)
+        plots = []
+#        pylab.rcParams.update({'figure.subplot.hspace': 0.22, '})
+        fig = pylab.figure(figsize=get_fig_size(1200, portrait=False))
+        ax_zij = fig.add_subplot(221)
+        ax_wij = fig.add_subplot(222)
+        ax_pij = fig.add_subplot(223)
+        ax_bias = fig.add_subplot(224)
+        linewidth = 3
+        legend_fontsize=20
+        
+        self.title_fontsize = 24
+        ax_zij.set_title('$\\tau_{z_i} = %d$ ms, $\\tau_{z_j} = %d$ ms' % \
+                (bcpnn_params['tau_i'], bcpnn_params['tau_j']), fontsize=self.title_fontsize)
+        ax_zij.plot(t_axis, pre_trace, c=color_pre, lw=linewidth, ls=':')
+        ax_zij.plot(t_axis, post_trace, c=color_post, lw=linewidth, ls=':')
+        p1, = ax_zij.plot(t_axis, zi, c=color_pre, label='$z_i$', lw=linewidth)
+        p2, = ax_zij.plot(t_axis, zj, c=color_post, label='$z_j$', lw=linewidth)
+        plots += [p1, p2]
+        labels_z = ['Pre $z_i$', 'Post $z_j$']
+        ax_zij.legend(plots, labels_z, fontsize=legend_fontsize, loc='upper right')
+#        ax_zij.set_xlabel('Time [ms]')
+        ax_zij.set_ylabel('z-traces')
+
+        plots = []
+        p1, = ax_pij.plot(t_axis, pi, c=color_pre, lw=linewidth)
+        p2, = ax_pij.plot(t_axis, pj, c=color_post, lw=linewidth)
+        p3, = ax_pij.plot(t_axis, pij, c=color_joint, lw=linewidth, ls=style_joint)
+        plots += [p1, p2, p3]
+        labels_p = ['$p_i$', '$p_j$', '$p_{ij}$']
+        ax_pij.set_title('$\\tau_{p} = %d$ ms' % \
+                (bcpnn_params['tau_p']), fontsize=self.title_fontsize)
+        ax_pij.legend(plots, labels_p, fontsize=legend_fontsize, loc='upper right')
+        ax_pij.set_xlabel('Time [ms]')
+        ax_pij.set_ylabel('p-traces')
+
+        plots = []
+        p1, = ax_wij.plot(t_axis, wij, c=color_pre, lw=linewidth)
+        plots += [p1]
+        labels_w = ['$w_{ij} = gain \cdot log(\\frac{p_{ij}}{p_i \cdot p_j})$']
+        ax_wij.legend(plots, labels_w, fontsize=legend_fontsize, loc='upper right')
+#        ax_wij.set_xlabel('Time [ms]')
+        ax_wij.set_ylabel('Weight')
+
+        plots = []
+        p1, = ax_bias.plot(t_axis, bias, c=color_pre, lw=linewidth)
+        plots += [p1]
+        labels_ = ['bias']
+        ax_bias.legend(plots, labels_, fontsize=legend_fontsize, loc='upper right')
+        ax_bias.set_xlabel('Time [ms]')
+        ax_bias.set_ylabel('Bias')
+
+        if output_fn != None:
+            print 'Saving traces to:', output_fn
+            pylab.savefig(output_fn)
         return fig
 
 
