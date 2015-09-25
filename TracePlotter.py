@@ -25,6 +25,8 @@ class TracePlotter(object):
 
     def __init__(self, plot_params=None):
 
+        self.fig = None
+
         if plot_params == None:
             plot_params = {'backend': 'png',
                           'axes.labelsize': 20,
@@ -52,13 +54,14 @@ class TracePlotter(object):
     def plot_trace_with_spikes(self, bcpnn_traces, bcpnn_params, dt, output_fn=None, fig=None, \
             color_pre='b', color_post='g', color_joint='r', style_joint='-', K_vec=None, \
             extra_txt=None):
+
         # unpack the bcpnn_traces
         wij, bias, pi, pj, pij, ei, ej, eij, zi, zj, pre_trace, post_trace = bcpnn_traces
         t_axis = dt * np.arange(zi.size)
         plots = []
 #        pylab.rcParams.update({'figure.subplot.hspace': 0.22, '})
         if fig == None:
-            fig = pylab.figure(figsize=get_fig_size(1200, portrait=False))
+            fig = pylab.figure()# figsize=get_fig_size(1200, portrait=False))
             ax1 = fig.add_subplot(321)
             ax2 = fig.add_subplot(322)
             ax3 = fig.add_subplot(323)
@@ -68,7 +71,6 @@ class TracePlotter(object):
         else:
             ax1, ax2, ax3, ax4, ax5, ax6 = fig.get_axes()
         linewidth = 3
-        legend_fontsize=20
         
         self.title_fontsize = 24
         ax1.set_title('$\\tau_{z_i} = %d$ ms, $\\tau_{z_j} = %d$ ms' % \
@@ -79,7 +81,7 @@ class TracePlotter(object):
         p2, = ax1.plot(t_axis, zj, c=color_post, label='$z_j$', lw=linewidth)
         plots += [p1, p2]
         labels_z = ['Pre $z_i$', 'Post $z_j$']
-        ax1.legend(plots, labels_z, fontsize=legend_fontsize, loc='lower right')
+        ax1.legend(plots, labels_z, loc='lower right')
 #        ax1.set_xlabel('Time [ms]')
         ax1.set_ylabel('z-traces')
 
@@ -91,7 +93,7 @@ class TracePlotter(object):
         labels_p = ['$p_i$', '$p_j$', '$p_{ij}$']
         ax5.set_title('$\\tau_{p} = %d$ ms' % \
                 (bcpnn_params['tau_p']), fontsize=self.title_fontsize)
-        ax5.legend(plots, labels_p, fontsize=legend_fontsize, loc='lower right')
+        ax5.legend(plots, labels_p, loc='lower right')
         ax5.set_xlabel('Time [ms]')
         ax5.set_ylabel('p-traces')
 
@@ -103,7 +105,7 @@ class TracePlotter(object):
         labels_p = ['$e_i$', '$e_j$', '$e_{ij}$']
         ax3.set_title('$\\tau_{e} = %d$ ms' % \
                 (bcpnn_params['tau_e']), fontsize=self.title_fontsize)
-        ax3.legend(plots, labels_p, fontsize=legend_fontsize, loc='lower right')
+        ax3.legend(plots, labels_p, loc='lower right')
 #        ax3.set_xlabel('Time [ms]')
         ax3.set_ylabel('e-traces')
 
@@ -111,9 +113,10 @@ class TracePlotter(object):
         p1, = ax4.plot(t_axis, wij, c=color_pre, lw=linewidth)
         plots += [p1]
 #        labels_w = ['$w_{ij}$']
+
         labels_w = ['$w_{ij} = gain \cdot log(\\frac{p_{ij}}{p_i \cdot p_j})$']
-#        wij = gain * np.log(pij / (pi * pj))
-        ax4.legend(plots, labels_w, fontsize=legend_fontsize, loc='lower right')
+        ax4.legend(plots, labels_w, loc='lower right')
+
 #        ax4.set_xlabel('Time [ms]')
         ax4.set_ylabel('Weight')
 
@@ -121,7 +124,7 @@ class TracePlotter(object):
         p1, = ax6.plot(t_axis, bias, c=color_pre, lw=linewidth)
         plots += [p1]
         labels_ = ['bias']
-        ax6.legend(plots, labels_, fontsize=legend_fontsize, loc='lower right')
+        ax6.legend(plots, labels_, loc='lower right')
         ax6.set_xlabel('Time [ms]')
         ax6.set_ylabel('Bias')
 
@@ -236,66 +239,87 @@ class TracePlotter(object):
         return fig
 
 
-    def plot_zij_pij_weight_bias(self, bcpnn_traces, bcpnn_params, dt, output_fn=None, fig=None, \
-            color_pre='b', color_post='g', color_joint='r', style_joint='-', K_vec=None, \
-            extra_txt=None):
+    def create_subplots_no_etrace(self):
+        self.fig = pylab.figure()
+        self.ax_zij = self.fig.add_subplot(221)
+        self.ax_wij = self.fig.add_subplot(222)
+        self.ax_pij = self.fig.add_subplot(223)
+        self.ax_bias = self.fig.add_subplot(224)
+
+
+    def plot_zij_pij_weight_bias(self, bcpnn_traces, bcpnn_params, dt, output_fn=None, \
+            color_pre='b', color_post='g', color_joint='r', style_joint='-', \
+            extra_txt=None, wij_lim=None, wij_label=''):
+
         # unpack the bcpnn_traces
         wij, bias, pi, pj, pij, ei, ej, eij, zi, zj, pre_trace, post_trace = bcpnn_traces
         t_axis = dt * np.arange(zi.size)
         plots = []
 #        pylab.rcParams.update({'figure.subplot.hspace': 0.22, '})
-        fig = pylab.figure(figsize=get_fig_size(1200, portrait=False))
-        ax_zij = fig.add_subplot(221)
-        ax_wij = fig.add_subplot(222)
-        ax_pij = fig.add_subplot(223)
-        ax_bias = fig.add_subplot(224)
-        linewidth = 3
+        if self.fig == None:
+            self.create_subplots_no_etrace()
+
+        linewidth = 2
         legend_fontsize=20
         
         self.title_fontsize = 24
-        ax_zij.set_title('$\\tau_{z_i} = %d$ ms, $\\tau_{z_j} = %d$ ms' % \
-                (bcpnn_params['tau_i'], bcpnn_params['tau_j']), fontsize=self.title_fontsize)
-        ax_zij.plot(t_axis, pre_trace, c=color_pre, lw=linewidth, ls=':')
-        ax_zij.plot(t_axis, post_trace, c=color_post, lw=linewidth, ls=':')
-        p1, = ax_zij.plot(t_axis, zi, c=color_pre, label='$z_i$', lw=linewidth)
-        p2, = ax_zij.plot(t_axis, zj, c=color_post, label='$z_j$', lw=linewidth)
+
+        title_zij = '%s' % extra_txt
+        title_zij += '$\\tau_{z, i} = %d$ ms, $\\tau_{z, j} = %d$ ms' % (bcpnn_params['tau_i'], bcpnn_params['tau_j'])
+        self.ax_zij.set_title(title_zij)
+        self.ax_zij.plot(t_axis, pre_trace, c=color_pre, lw=linewidth, ls=':')
+        self.ax_zij.plot(t_axis, post_trace, c=color_post, lw=linewidth, ls=':')
+        p1, = self.ax_zij.plot(t_axis, zi, c=color_pre, label='$z_i$', lw=linewidth)
+        p2, = self.ax_zij.plot(t_axis, zj, c=color_post, label='$z_j$', lw=linewidth)
         plots += [p1, p2]
         labels_z = ['Pre $z_i$', 'Post $z_j$']
-        ax_zij.legend(plots, labels_z, fontsize=legend_fontsize, loc='upper right')
-#        ax_zij.set_xlabel('Time [ms]')
-        ax_zij.set_ylabel('z-traces')
+        self.ax_zij.legend(plots, labels_z, fontsize=legend_fontsize, loc='lower right')
+#        self.ax_zij.set_xlabel('Time [ms]')
+        self.ax_zij.set_ylabel('z-traces')
 
         plots = []
-        p1, = ax_pij.plot(t_axis, pi, c=color_pre, lw=linewidth)
-        p2, = ax_pij.plot(t_axis, pj, c=color_post, lw=linewidth)
-        p3, = ax_pij.plot(t_axis, pij, c=color_joint, lw=linewidth, ls=style_joint)
+        p1, = self.ax_pij.plot(t_axis, pi, c=color_pre, lw=linewidth)
+        p2, = self.ax_pij.plot(t_axis, pj, c=color_post, lw=linewidth)
+        p3, = self.ax_pij.plot(t_axis, pij, c=color_joint, lw=linewidth, ls=style_joint)
         plots += [p1, p2, p3]
         labels_p = ['$p_i$', '$p_j$', '$p_{ij}$']
-        ax_pij.set_title('$\\tau_{p} = %d$ ms' % \
-                (bcpnn_params['tau_p']), fontsize=self.title_fontsize)
-        ax_pij.legend(plots, labels_p, fontsize=legend_fontsize, loc='upper right')
-        ax_pij.set_xlabel('Time [ms]')
-        ax_pij.set_ylabel('p-traces')
+        self.ax_pij.set_title('$\\tau_{p} = %d$ ms' % \
+                (bcpnn_params['tau_p']))
+        self.ax_pij.legend(plots, labels_p, fontsize=legend_fontsize, loc='lower right')
+        self.ax_pij.set_xlabel('Time [ms]')
+        self.ax_pij.set_ylabel('p-traces')
 
         plots = []
-        p1, = ax_wij.plot(t_axis, wij, c=color_pre, lw=linewidth)
+        p1, = self.ax_wij.plot(t_axis, wij, c=color_pre, lw=linewidth)
         plots += [p1]
-        labels_w = ['$w_{ij} = gain \cdot log(\\frac{p_{ij}}{p_i \cdot p_j})$']
-        ax_wij.legend(plots, labels_w, fontsize=legend_fontsize, loc='upper right')
-#        ax_wij.set_xlabel('Time [ms]')
-        ax_wij.set_ylabel('Weight')
+
+        if wij_label == '':
+            labels_w = ['$w_{final}=%.2f$' % (wij[-1])]
+        else:
+            labels_w = [wij_label]
+#        labels_w = ['$w_{ij} = gain \cdot log(\\frac{p_{ij}}{p_i \cdot p_j})$']
+        self.ax_wij.legend(plots, labels_w, fontsize=legend_fontsize, loc='upper right')
+#        self.ax_wij.set_xlabel('Time [ms]')
+        title_wij = '$w_{ij} = gain \cdot log(p_{ij} / (p_i \cdot p_j))$'
+#        title_wij = '$w_{ij} = gain \cdot log(\\frac{p_{ij}}{p_i \cdot p_j})$'
+        self.ax_wij.set_ylabel('Weight')
+        self.ax_wij.set_title(title_wij)
+        if wij_lim != None:
+            self.ax_wij.set_ylim(wij_lim)
+
 
         plots = []
-        p1, = ax_bias.plot(t_axis, bias, c=color_pre, lw=linewidth)
+        p1, = self.ax_bias.plot(t_axis, bias, c=color_pre, lw=linewidth)
         plots += [p1]
         labels_ = ['bias']
-        ax_bias.legend(plots, labels_, fontsize=legend_fontsize, loc='upper right')
-        ax_bias.set_xlabel('Time [ms]')
-        ax_bias.set_ylabel('Bias')
+        self.ax_bias.legend(plots, labels_, fontsize=legend_fontsize, loc='lower right')
+        self.ax_bias.set_xlabel('Time [ms]')
+        self.ax_bias.set_ylabel('Bias')
+        self.ax_bias.set_title('Bias current models intrinsic excitability')
 
         if output_fn != None:
             print 'Saving traces to:', output_fn
             pylab.savefig(output_fn)
-        return fig
+
 
 

@@ -21,8 +21,9 @@ plot_params = {'backend': 'png',
               'figure.subplot.right':.92,
               'figure.subplot.top':.88,
               'figure.subplot.hspace':.40,
-              'figure.figsize'  : TracePlotter.get_fig_size(800, portrait=False), 
+              'figure.figsize'  : TracePlotter.get_fig_size(1000, portrait=False), 
               'figure.subplot.wspace':.25}
+
 
 def compute_bcpnn_traces(spike_train_0, spike_train_1, K_vec, syn_params, t_sim, plot=False):
     #######################
@@ -52,25 +53,51 @@ def compute_bcpnn_traces(spike_train_0, spike_train_1, K_vec, syn_params, t_sim,
 
 
 if __name__ == '__main__':
+    """
+    This script computes the bcpnn traces for a pair of neurons in a setting with repetitive firing.
+    """
 
-    t_sim = 500.
+    np.random.seed(0)
     dt = 0.1
-    st_0 = np.array([50., 55., 60.])
-    st_1 = np.array([150., 155., 160.])
-#    K_vec = np.ones((t_sim + 1.) / dt)
+    st_0 = []
+    st_1 = []
+
+    n_iterations = 5
+    
+    dt_stimulus_interval = 100.  # how far apart the stimulus packages are in time, dt_stimulus_interval = 0 would be very correlated (depending on f_max, and t_stim)
+    t_stim = 100.               # length of one stimulus package
+    dt_stim = 100.             # pause between the packages
+    t_offset = 50.              # start of the first stimulus package
+    f_max = 200.                 # f_max_stim, maximum response rate
+    dt_events = 1. / f_max * t_stim
+    n_events = f_max * t_stim / 1000.
+    for i_ in xrange(n_iterations):
+        st_0 += np.sort((i_ * dt_stim + t_stim + t_offset - i_ * dt_stim + t_offset) * np.random.random_sample(n_events) + i_ * dt_stim + t_offset).tolist()
+        st_1 += np.sort((i_ * dt_stim + t_stim + t_offset + dt_stimulus_interval - i_ * dt_stim + t_offset + dt_stimulus_interval) * np.random.random_sample(n_events) + i_ * dt_stim + t_offset + dt_stimulus_interval).tolist()
+        # for regular spike trains use:
+#        st_0 += np.arange(i_ * dt_stim + t_offset, i_ * dt_stim + t_stim + t_offset, dt_events).tolist()
+
+    st_0 = np.array(st_0)
+    st_1 = np.array(st_1)
+    t_sim = n_iterations * (t_stim  + dt_stim)
+    print 'dt_events:', dt_events
+    print 'n_events:', n_events
+#    print 'st_0:', st_0
+#    print 'st_1:', st_1
+
     spike_width = 0.1
-    K_vec = np.ones((t_sim + spike_width) / dt)
-#    K_vec[:(t_sim + spike_width) / dt / 2] = 0.
-    tau_p = 500.
-    tau_e = 100.
-    tau_i = 75.
-    tau_j = 10.
+#    K_vec = np.ones((t_sim + spike_width) / dt)
+    K_vec = None
+    tau_p = 10000.
+    tau_e = 1.
+    tau_i = 150.
+    tau_j = 5.
     syn_params = {'p_i': .01, 'p_j': .01, 'p_ij': 1e-8, 'gain': 1.0, \
             'K': 0., 'fmax': 20., 'epsilon': 1. / (20 * tau_p), \
             'delay':1.0, 'tau_i': tau_i, 'tau_j': tau_j, 'tau_e': tau_e, 'tau_p': tau_p}
     w_offline = compute_bcpnn_traces(st_0, st_1, K_vec, syn_params, t_sim, plot=True)
 
-    output_fn = 'example_plot_taui%d.png' % tau_i
+    output_fn = 'training_niterations%d_taui%d_tstim%d_dtstim%d_fmaxstim%d.png' % (n_iterations, tau_i, t_stim, dt_stimulus_interval, f_max)
     print 'Saving fig to:', output_fn
     pylab.savefig(output_fn, dpi=200)
     pylab.show()

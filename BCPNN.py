@@ -28,6 +28,8 @@ def get_spiking_weight_and_bias(pre_trace, post_trace, bcpnn_params, dt=.1, K_ve
     if K_vec != None:
         assert (len(K_vec) == len(pre_trace)), "Bcpnn.get_spiking_weight_and_bias: pre-trace and Kappa-Vector have different lengths!\nlen pre_trace %d K_vec %d" % \
                 (len(pre_trace), len(K_vec))
+    else:
+        K_vec = np.ones(len(pre_trace))
 
     initial_value = bcpnn_params['p_i']
     n = len(pre_trace)
